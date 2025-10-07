@@ -95,7 +95,44 @@ if __name__ == "__main__":
     #     for val in output:
     #         f.write(str(val) + "\n")
 
-
     screen_dataset = pd.read_csv("smiles.csv")
 
+    from rdkit import Chem
+    from tqdm import tqdm
+    from rdkit.Chem import AllChem
+    from rdkit.DataStructs.cDataStructs import ConvertToNumpyArray
+    import numpy as np
+
+    def generate_fingerprints(smiles):
+        mol = Chem.MolFromSmiles(smiles)
+        if mol is None:
+            return None, None  # Invalid molecule
+        # ECFP4 (Morgan fingerprint, radius=2, binary)
+        ecfp4 = AllChem.GetMorganFingerprintAsBitVect(mol, radius=2, nBits=2048)
+        # FCFP4 (feature-based Morgan fingerprint, radius=2)
+        fcfp4 = AllChem.GetMorganFingerprintAsBitVect(mol, radius=2, nBits=2048, useFeatures=True)
+
+        # Convert to numpy arrays (optional, depending on how you want to store)
+        ecfp4_array = np.zeros((2048,), dtype=int)
+        fcfp4_array = np.zeros((2048,), dtype=int)
+        ConvertToNumpyArray(ecfp4, ecfp4_array)
+        ConvertToNumpyArray(fcfp4, fcfp4_array)
+
+        return ecfp4_array, fcfp4_array
+
+    tqdm.pandas(desc="Generating fingerprints")
+    screen_dataset[['ECFP4', 'FCFP4']] = screen_dataset['smiles'].progress_apply(
+        lambda x: pd.Series(generate_fingerprints(x)))
+    screen_dataset['Combined'] = screen_dataset.apply(lambda row: np.concatenate([row['ECFP4'], row['FCFP4']]), axis=1)
+
+    screen_X = np.stack(screen_dataset['Combined'].values)
+    print("Shape of X:", screen_X.shape)
+
     print(screen_dataset)
+
+    output = model.predict(screen_X)
+    print(output)
+
+    with open("screen_results.txt", "w") as f:
+        for val in output:
+            f.write(str(val) + "\n")
