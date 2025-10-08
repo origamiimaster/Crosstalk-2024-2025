@@ -121,18 +121,44 @@ if __name__ == "__main__":
         return ecfp4_array, fcfp4_array
 
     tqdm.pandas(desc="Generating fingerprints")
-    screen_dataset[['ECFP4', 'FCFP4']] = screen_dataset['smiles'].progress_apply(
-        lambda x: pd.Series(generate_fingerprints(x)))
+    screen_dataset[['ECFP4', 'FCFP4']] = screen_dataset['smiles'].progress_apply(lambda x: pd.Series(generate_fingerprints(x)))
     screen_dataset['Combined'] = screen_dataset.apply(lambda row: np.concatenate([row['ECFP4'], row['FCFP4']]), axis=1)
 
-    screen_X = np.stack(screen_dataset['Combined'].values)
-    print("Shape of X:", screen_X.shape)
+    # screen_X = np.stack(screen_dataset['Combined'].values)
+    # print("Shape of X:", screen_X.shape)
 
-    print(screen_dataset)
+    # print(screen_dataset)
 
-    output = model.predict(screen_X)
-    print(output)
+    # output = model.predict(screen_X)
+    # print(output)
+
+    # with open("screen_results.txt", "w") as f:
+    #     for val in output:
+    #         f.write(str(val) + "\n")
+
+
+    BATCH_SIZE = 1000  # Adjust based on your system’s memory
+
+    tqdm.pandas(desc="Processing batches")
 
     with open("screen_results.txt", "w") as f:
-        for val in output:
-            f.write(str(val) + "\n")
+        for start_idx in tqdm(range(0, len(screen_dataset), BATCH_SIZE), desc="Batching predictions"):
+            end_idx = min(start_idx + BATCH_SIZE, len(screen_dataset))
+            batch = screen_dataset.iloc[start_idx:end_idx]
+
+            # Generate fingerprints for the batch
+            fingerprints = batch['smiles'].apply(lambda x: pd.Series(generate_fingerprints(x)))
+            batch[['ECFP4', 'FCFP4']] = fingerprints
+
+            # Combine fingerprints
+            combined = np.stack([
+                np.concatenate([row['ECFP4'], row['FCFP4']])
+                for _, row in batch.iterrows()
+            ])
+
+            # Predict for this batch
+            batch_output = model.predict(combined)
+
+            # Write results immediately
+            for val in batch_output:
+                f.write(str(val) + "\n")
