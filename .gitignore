@@ -209,3 +209,4 @@ __marimo__/
 
 smiles.csv
 crosstalk_train.parquet
+wandb/

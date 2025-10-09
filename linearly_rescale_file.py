@@ -33,4 +33,4 @@ def rescale_probabilities(filename, target_count=40, threshold=0.5):
     print(f"Rescaled probabilities saved to rescaled_{filename}")
 
 if __name__ == "__main__":
-    rescale_probabilities("big_votes.txt")
+    rescale_probabilities("screen_results.txt")
