@@ -1,0 +1,7 @@
+wandb
+scikit-learn
+cuml
+numpy
+pandas
+rdkit
+tqdm
